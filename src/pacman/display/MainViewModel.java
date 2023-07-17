@@ -1,0 +1,227 @@
+package pacman.display;
+
+import javafx.beans.property.*;
+import pacman.game.*;
+import pacman.hunter.Hunter;
+import pacman.util.Direction;
+
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
+
+/**
+ * Used as an intermediary between the game and the MainView
+ * */
+public class MainViewModel {
+    // The BoardViewModel for this main view
+    private BoardViewModel boardVM;
+    // The ScoreViewModel for this main view
+    private ScoreViewModel scoreVM;
+    // The game used as the model
+    private PacmanGame game;
+    // The title for the game window
+    private StringProperty title;
+
+    // game state properties
+    private BooleanProperty gameOver;
+    private BooleanProperty pause;
+    // The game tick
+    private int tick;
+
+    // The name of the save file
+    private String saveName;
+
+    /**
+     * Creates a MainViewModel and updates the properties
+     * and the ScoreViewModel created.
+     * ScoreViewModel and BoardViewModel should be created here.
+     *
+     * By default, the game should be paused.
+     *
+     * @param model The PacmanGame to link in the view
+     * @param saveFilename The name for saving the game
+     *
+     * @requires model != null && saveFilename != null &&
+     *           !saveFilename.isEmpty()
+     * */
+    public MainViewModel(PacmanGame model, String saveFilename) {
+        game = model;
+        // Initialize game properties to default values
+        title = new SimpleStringProperty();
+        title.set(game.getTitle());
+
+        gameOver = new SimpleBooleanProperty();
+        gameOver.setValue(game.getLives() == 0);
+
+        pause = new SimpleBooleanProperty();
+        pause.setValue(true);
+
+        tick = 0;
+
+        boardVM = new BoardViewModel(game);
+        scoreVM = new ScoreViewModel(game);
+        scoreVM.update();
+        saveName = saveFilename;
+    }
+
+    /**
+     * Updates the title of the game window and the score view model.
+     *
+     * @ensures Title format is "[title] by [author]"
+     *          without the quotes or brackets. For example,
+     *          "Default CSSE2002 PacMan Map by Evan Hughes". There should be
+     *          a single space either side of "by"
+     * */
+    public void update() {
+        // updates the title
+        title.setValue(game.getTitle());
+
+        // updates the ScoreViewModel
+        scoreVM.update();
+    }
+
+    /**
+     * Gets the title property of the Game Window.
+     *
+     * @return The title property of the game
+     * */
+    public StringProperty getTitle() {
+        return title;
+    }
+
+    /**
+     * Gets the property representing whether the game is over or not.
+     *
+     * @return The game over status
+     * */
+    public BooleanProperty isGameOver() {
+        return gameOver;
+    }
+
+    /**
+     * Saves the current state of the game to the file location given
+     * in the constructor. An IOException should not cause the program
+     * to crash and should be ignored.
+     * */
+    public void save() {
+        try{
+            System.out.println("Saving");
+            BufferedWriter writer =
+                new BufferedWriter(new FileWriter(saveName));
+            GameWriter.write(writer, game);
+            writer.close();
+        } catch (IOException e) {
+            // do nothing
+        }
+    }
+
+    /**
+     * Tick is to be called by the view at around 60 times a second.
+     * This method will pass these ticks down to the model at a reduced rate
+     * depending on the level of the game. The game starts with zero ticks.
+     * If the game is not paused:
+     *
+     * Check if the current tick count is integer-divisible by the delay
+     * specified for the current level. If it is integer-divisible:
+     * Tick the model. See PacmanGame.tick()
+     * Increment the tick count by 1.
+     *
+     * Finally, update the "game over" property to be true if the player
+     * currently has 0 lives left, and false otherwise. This should be done
+     * regardless of whether or not the game is paused.
+     * */
+    public void tick() {
+        // Check if the game is paused or not
+        boolean isPaused = isPaused().getValue();
+        // Increment tick for Main Model when not paused
+        if(!isPaused) {
+            tick++;
+        }
+
+        // Get the delay value for the level
+        int[] delays = {50, 50, 40, 40, 30, 30, 20, 20, 20};
+        int levelDelay = 10;
+        int currentLevel = game.getLevel();
+        if(currentLevel <= 8){
+            levelDelay = delays[currentLevel];
+        }
+
+        // Check if the tick is divisible by the delay value
+        if(!isPaused && tick % (levelDelay) == 0){
+            game.tick();
+        }
+
+        // Update game over property
+        gameOver.setValue(game.getLives() == 0);
+    }
+
+    /**
+     * Accepts key input from the view and acts according to the key.
+     *
+     * @param input The incoming input from the view
+     *
+     * @requires input != null
+     * */
+    public void accept(String input) {
+        String processedInput = input.toLowerCase();
+        Hunter hunter = game.getHunter();
+        // Actions available at any state
+        switch (processedInput){
+            case "p":
+                pause.setValue(!pause.getValue());
+                break;
+            case "r":
+                game.reset();
+                break;
+        }
+
+        // Actions available only when the game is not paused
+        if (!pause.getValue()) {
+            switch (processedInput) {
+                case "w":
+                    hunter.setDirection(Direction.UP);
+                    break;
+                case "a":
+                    hunter.setDirection(Direction.LEFT);
+                    break;
+                case "s":
+                    hunter.setDirection(Direction.DOWN);
+                    break;
+                case "d":
+                    hunter.setDirection(Direction.RIGHT);
+                    break;
+                case "o":
+                    hunter.activateSpecial(hunter.SPECIAL_DURATION);
+                    break;
+            }
+        }
+    }
+
+    /**
+     * Gets the paused property of the game.
+     *
+     * @return The property associated with the pause state
+     * */
+    public BooleanProperty isPaused() {
+        return pause;
+    }
+
+    /**
+     * Gets the BoardViewModel created at initialisation.
+     *
+     * @return The BoardViewModel associated with the game play
+     * */
+    public BoardViewModel getBoardVM() {
+        return boardVM;
+    }
+
+    /**
+     * Gets the ScoreViewModel created at initialisation.
+     *
+     * @return The ScoreViewModel associated with the game's score
+     * */
+    public ScoreViewModel getScoreVM() {
+        return scoreVM;
+    }
+
+}

@@ -1,0 +1,152 @@
+package pacman.display;
+
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import pacman.game.PacmanGame;
+import pacman.score.ScoreBoard;
+
+/**
+ * ScoreViewModel is an intermediary between ScoreView and the PacmanGame.
+ * Used for displaying the player's score in the GUI.
+ * */
+public class ScoreViewModel {
+    // The ScoreBoard of the game
+    private ScoreBoard scores;
+    // The current score stored in the view model
+    private StringProperty currentScore;
+    // Dummy value to store new sort mode, does not affect sort mode
+    private String sortValue;
+    // The mode to display the score entries
+    private StringProperty sortMode;
+    // THe list of score current stored
+    private ObservableList<String> scoreEntries;
+
+    /**
+     * Creates a new ScoreViewModel and updates its properties.
+     * The default ordering of the scores should be by name.
+     *
+     * @param model The PacmanGame to link to the view
+     *
+     * @requires model != null
+     * */
+    public ScoreViewModel(PacmanGame model) {
+        // Get scoreboard from the game
+        scores = model.getScores();
+        // Initialise ScoreVM Properties
+        currentScore = new SimpleStringProperty();
+        currentScore.set("Score : 0");
+
+        sortValue = "Sorted by Name";
+
+        sortMode = new SimpleStringProperty();
+        sortMode.set(sortValue);
+
+        scoreEntries = FXCollections.observableArrayList();
+        scoreEntries.setAll(scores.getEntriesByName());
+    }
+
+    /**
+     * Updates the properties containing the current score, the sort order
+     * of the scoreboard and the list of sorted scores.
+     *
+     * The format for the current score property should be
+     * "Score: [currentScore]" without quotes or brackets, where
+     * currentScore is the value returned by ScoreBoard.getScore().
+     *
+     * The sort order property should be set to either "Sorted by Name"
+     * or "Sorted by Score", depending on the current score sort order.
+     *
+     * Finally, the property representing the list of scores should be
+     * updated to contain a list of scores sorted according to
+     * the current score sort order, as returned by
+     * ScoreBoard.getEntriesByName() and ScoreBoard.getEntriesByScore().
+     * */
+    public void update() {
+        // Update the current score property
+        String formatString = String.format("Score : %d", scores.getScore());
+        currentScore.set(formatString);
+
+        // Update the sorting order
+        sortMode.set(sortValue);
+
+        // Update the list of scores stored in the view model
+        switch (sortMode.getValue()) {
+            case "Sorted by Name":
+                scoreEntries.setAll(scores.getEntriesByName());
+                break;
+            case "Sorted by Score":
+                scoreEntries.setAll(scores.getEntriesByScore());
+                break;
+        }
+    }
+
+    /**
+     * Changes the order in which player's scores are displayed.
+     * The possible orderings are by name or by score.
+     * Calling this method once should switch between these two orderings.
+     * */
+    public void switchScoreOrder() {
+        // Switch between "Score" mode and "Name" mode
+        switch (sortValue){
+            case "Sorted by Name":
+                sortValue = "Sorted by Score";
+                break;
+            case "Sorted by Score":
+                sortValue = "Sorted by Name";
+                break;
+        }
+    }
+
+    /**
+     * Returns the StringProperty containing the current score for the player.
+     *
+     * @return The property representing the current score
+     * */
+    public StringProperty getCurrentScoreProperty() {
+        return currentScore;
+    }
+
+    /**
+     * Returns the StringProperty of how the player's scores are displayed.
+     *
+     * @return The StringProperty representing how the player's score are
+     *         displayed
+     * */
+    public StringProperty getSortedBy() {
+        return sortMode;
+    }
+
+    /**
+     * Returns a list containing all "Name : Value" score entries in
+     * the game's ScoreBoard, sorted by the current sort order.
+     *
+     * @return The list of sorted scores
+     * */
+    public ObservableList<String> getScores() {
+        return scoreEntries;
+    }
+
+    /**
+     * Returns the overall current score for the game.
+     *
+     * @return The current score
+     * */
+    public int getCurrentScore() {
+        return scores.getScore();
+    }
+
+    /**
+     * Sets the given player's score to score.
+     * This should override the score if it was previously
+     * set (even if new score is lower). Invalid player names should be ignored.
+     *
+     * @param player The player
+     * @param score The new score
+     * */
+    public void setPlayerScore(String player, int score){
+        scores.setScore(player, score);
+    }
+
+}
